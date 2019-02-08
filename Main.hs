@@ -1,93 +1,60 @@
 module Main(main) where
 
-import Graphics.Gloss
+import Graphics.Gloss (Display, Color, Picture,
+    circleSolid, red, color, translate, dark,
+    pictures, black)
 import Graphics.Gloss.Data.ViewPort
-import Graphics.Gloss.Interface.Pure.Game
+import Graphics.Gloss.Interface.Pure.Game (
+      Event(EventKey)
+    , Key(Char)
+    , KeyState(Up, Down)
+    , play
+    , Display(InWindow)
+    )
 
-width, height, offset :: Int
-width = 300
-height = 300
-offset = 100
+import qualified Data.Map.Strict as Map
+import Data.Complex
+type Vector = Complex Float
 
-paddleWidth = 26
-paddleHeight = 86
-ballRadius = 10
-
+normalize a = a / (sqrt $ a * conjugate a)
 window :: Display
-window = InWindow "Pong" (width, height) (offset, offset)
+window = InWindow "JampaZen" (500, 500) (5, 5) -- w, h, offset
 
 background :: Color
 background = black
 
 -- | Data describing the state of the pong game. 
 data PongGame = Game
-    { ballLoc :: (Float, Float)  -- ^ Pong ball (x, y) location.
-    , ballVel :: (Float, Float)  -- ^ Pong ball (x, y) velocity. 
-    , player1 :: Float           -- ^ Left player paddle height.
-                                                             -- Zero is the middle of the screen. 
-    , player2 :: Float           -- ^ Right player paddle height.
-    } deriving Show
+    { player :: Vector
+    , keyboard :: Map.Map Key KeyState
+    }
+
+toxy :: Complex a -> (a, a)
+toxy (x :+ y) = (x, y)
 
 -- | The starting state for the game of Pong.
 initialState :: PongGame
 initialState = Game
-    { ballLoc = (-10, 30)
-    , ballVel = (1, -3)
-    , player1 = 40
-    , player2 = -80
+    { player = 0 :+ 0
+    , keyboard = Map.fromList $ zip (map Char "wasd") (repeat Down)
     }
 
 -- | Convert a game state into a picture.
 render :: PongGame  -- ^ The game state to render.
        -> Picture   -- ^ A picture of this game state.
-render game =
-    pictures [ball, walls,
-                        mkPaddle rose 120 $ player1 game,
-                        mkPaddle orange (-120) $ player2 game]
+render Game {player=(x:+y)} =
+    pictures [playerimage]
     where
-        --  The pong ball.
-        ball = uncurry translate (ballLoc game) $
-                     color ballColor $
-                     circleSolid ballRadius
-        ballColor = dark red
-
-        --  The bottom and top walls.
-        wall :: Float -> Picture
-        wall offset =
-            translate 0 offset $
-                color wallColor $
-                    rectangleSolid 270 10
-
-        wallColor = greyN 0.5
-        walls = pictures [wall 150, wall (-150)]
-
-        --  Make a paddle of a given border and vertical offset.
-        mkPaddle :: Color -> Float -> Float -> Picture
-        mkPaddle col x y = pictures
-            [ translate x y $ color col $ rectangleSolid 26 86
-            , translate x y $ color paddleColor $ rectangleSolid 20 80
-            ]
-
-        paddleColor = light (light blue)
-
--- | Update the ball position using its current velocity.
-moveBall :: Float    -- ^ The number of seconds since last update
-                 -> PongGame -- ^ The initial game state
-                 -> PongGame -- ^ A new game state with an updated ball position
--- | Update the ball position using its current
-moveBall seconds game = game { ballLoc = (x', y') }
-    where
-        -- Old locations and velocities.
-        (x, y) = ballLoc game
-        (vx, vy) = ballVel game
-
-        -- New locations.
-        x' = x + vx * seconds
-        y' = y + vy * seconds
+        playerimage = translate x y $
+                     color (dark red) $
+                     circleSolid 10
 
 -- | Update the game by moving the ball and bouncing off walls.
 update :: Float -> PongGame -> PongGame
-update seconds = wallBounce . moveBall seconds
+update seconds = playerUpdate seconds --wallBounce . moveBall seconds
+
+playerUpdate seconds game = game {player=pos'} where
+    pos' = player game - 5*(keyboardToVector $ keyboard game)
 
 -- | Number of frames to show per second.
 fps :: Int
@@ -98,44 +65,27 @@ main = play window background fps initialState render handleKeys update
 
 -- | Update the game by moving the ball.
 -- Ignore the ViewPort argument.
+stateToScalar :: KeyState -> Vector
+stateToScalar Up = 1 :+ 0
+stateToScalar Down = 0 :+ 0
 
-type Radius = Float 
-type Position = (Float, Float)
+keyToVector :: Key -> Vector
+keyToVector (Char 'w') =  0 :+  1
+keyToVector (Char 's') =  0 :+(-1)
+keyToVector (Char 'a') =(-1):+  0
+keyToVector (Char 'd') =  1 :+  0
+keyToVector  _  =  0 :+  0
 
--- | Given position and radius of the ball, return whether a collision occurred.
-wallCollision :: Position -> Radius -> Bool 
-wallCollision (_, y) radius = topCollision || bottomCollision
-    where
-        topCollision    = y - radius <= -fromIntegral width / 2 
-        bottomCollision = y + radius >=  fromIntegral width / 2
 
-wallBounce :: PongGame -> PongGame
-wallBounce game = game { ballVel = (vx, vy') }
-    where
 
-        -- The old velocities.
-        (vx, vy) = ballVel game
+keyboardToVector :: Map.Map Key KeyState -> Vector
+keyboardToVector = Map.foldrWithKey f (0:+0) where
+    f k v a = a + (stateToScalar v)*(keyToVector k)
 
-        vy' = if wallCollision (ballLoc game) ballRadius
-                    then -vy
-                    else  vy
-
--- | Respond to key events.
 handleKeys :: Event -> PongGame -> PongGame
 -- For an 's' keypress, reset the ball to the center.
-handleKeys (EventKey (Char 's') _ _ _) game =
-  game { ballLoc = (0, 0) }
--- Do nothing for all other events.
-handleKeys (EventKey (Char a) _ _ _) game = game
+
+handleKeys (EventKey key keystate _ _) game =
+    game { keyboard = Map.adjust (const keystate) key (keyboard game)}
+
 handleKeys _ game = game
-{-}
--- | Detect a collision with a paddle. Upon collisions,
--- change the velocity of the ball to bounce it off the paddle.
-paddleCollision :: Game -> Bool
-paddleCollison = bx - ballRadius < p
-paddleBounce :: PongGame -> PongGame
-paddleBounce game = game { ballVel = (vx', vy) }
-        where
-                radius = 10
-                (vx, vy) = ballVel game
---}

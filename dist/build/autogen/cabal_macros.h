@@ -14,12 +14,26 @@
   (major1) == 4 && (major2) <  9 || \
   (major1) == 4 && (major2) == 9 && (minor) <= 1)
 
+/* package containers-0.5.7.1 */
+#define VERSION_containers "0.5.7.1"
+#define MIN_VERSION_containers(major1,major2,minor) (\
+  (major1) <  0 || \
+  (major1) == 0 && (major2) <  5 || \
+  (major1) == 0 && (major2) == 5 && (minor) <= 7)
+
 /* package gloss-1.13.0.1 */
 #define VERSION_gloss "1.13.0.1"
 #define MIN_VERSION_gloss(major1,major2,minor) (\
   (major1) <  1 || \
   (major1) == 1 && (major2) <  13 || \
   (major1) == 1 && (major2) == 13 && (minor) <= 0)
+
+/* tool cpphs-1.20.8 */
+#define TOOL_VERSION_cpphs "1.20.8"
+#define MIN_TOOL_VERSION_cpphs(major1,major2,minor) (\
+  (major1) <  1 || \
+  (major1) == 1 && (major2) <  20 || \
+  (major1) == 1 && (major2) == 20 && (minor) <= 8)
 
 /* tool gcc-7 */
 #define TOOL_VERSION_gcc "7"
@@ -62,6 +76,13 @@
   (major1) <  0 || \
   (major1) == 0 && (major2) <  68 || \
   (major1) == 0 && (major2) == 68 && (minor) <= 1)
+
+/* tool hscolour-1.24 */
+#define TOOL_VERSION_hscolour "1.24"
+#define MIN_TOOL_VERSION_hscolour(major1,major2,minor) (\
+  (major1) <  1 || \
+  (major1) == 1 && (major2) <  24 || \
+  (major1) == 1 && (major2) == 24 && (minor) <= 0)
 
 /* tool pkg-config-0.29.1 */
 #define TOOL_VERSION_pkg_config "0.29.1"
