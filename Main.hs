@@ -14,7 +14,11 @@ import Graphics.Gloss.Interface.Pure.Game (
 
 import qualified Data.Map.Strict as Map
 import Data.Complex
+import Data.List (elemIndex)
 type Vector = Complex Float
+j, zero :: Vector
+j = 0:+1
+zero = 0:+0
 
 normalize a = a / (sqrt $ a * conjugate a)
 window :: Display
@@ -70,12 +74,14 @@ stateToScalar Up = 1 :+ 0
 stateToScalar Down = 0 :+ 0
 
 keyToVector :: Key -> Vector
+keyToVector (Char c) = maybe zero (j^) (elemIndex c "dwas")
+{-}
 keyToVector (Char 'w') =  0 :+  1
 keyToVector (Char 's') =  0 :+(-1)
 keyToVector (Char 'a') =(-1):+  0
 keyToVector (Char 'd') =  1 :+  0
 keyToVector  _  =  0 :+  0
-
+-}
 
 
 keyboardToVector :: Map.Map Key KeyState -> Vector
