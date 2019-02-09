@@ -216,3 +216,23 @@ dependencies: GLUT-2.7.0.14 OpenGL-3.0.2.2 base-4.9.1.0 bmp-1.2.6.3
 install-outcome: InstallOk
 docs-outcome: NotTried
 tests-outcome: NotTried
+
+package: mtl-2.2.2
+os: linux
+arch: x86_64
+compiler: ghc-8.0.2
+client: cabal-install-1.24.0.2
+dependencies: base-4.9.1.0 transformers-0.5.2.0
+install-outcome: InstallOk
+docs-outcome: NotTried
+tests-outcome: NotTried
+
+package: random-1.1
+os: linux
+arch: x86_64
+compiler: ghc-8.0.2
+client: cabal-install-1.24.0.2
+dependencies: base-4.9.1.0 time-1.6.0.1
+install-outcome: InstallOk
+docs-outcome: NotTried
+tests-outcome: NotTried

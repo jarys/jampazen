@@ -1,6 +1,6 @@
 module Main(main) where
 
-import Graphics.Gloss (Display, Color, Picture,
+import Graphics.Gloss (Display, Color, Picture(..),
     circleSolid, red, color, translate, dark,
     pictures, black, white)
 import Graphics.Gloss.Data.ViewPort
@@ -14,12 +14,17 @@ import Graphics.Gloss.Interface.Pure.Game (
     )
 
 import qualified Data.Map.Strict as Map
-import Data.List (elemIndex)
+import Data.List (elemIndex, mapAccumL)
+import System.Random
+import Control.Monad.State  
 
 import Physics
 
-data Ball = Ball Vector Vector Float
+data Ball   = Ball Vector Vector Float
 type Bullet = Ball
+type Barrel  = Ball
+data Smoke = Smoke Ball Float Float
+
 
 data Player = Player {body::Ball}
 
@@ -28,7 +33,10 @@ data Game = Game {
          , balls :: [Ball]
          , keyboard :: Map.Map Key KeyState
          , bullets :: [Bullet]
+         , barrels :: [Barrel]
          , clicks :: [Vector]
+         , smoke :: [Smoke]
+         , seed :: StdGen
          }
 
 class Entity e where
@@ -46,9 +54,12 @@ initialState = Game
     { player = Player { body=Ball 0 0 10
                       }
     , keyboard = Map.fromList $ zip (map Char "wasd") (repeat Up)
-    , balls = [Ball (100:+100) 0 10, Ball ((-100):+100) 0 100]
-    , bullets = []
-    , clicks = []
+    , balls    = [Ball ((-100):+100) 0 100]
+    , bullets  = []
+    , barrels  = [Ball (100:+100) 0 10]
+    , clicks   = []
+    , smoke    = []
+    , seed     = mkStdGen 1
     }
 
 fps :: Int
@@ -76,9 +87,11 @@ instance Entity Game where
         camera = translate (-mx) (-my) . render
         cammap x = map camera $ x game
     in  pictures $ concat [
-          [camera $ player game],
-          cammap balls,
-          cammap bullets
+          [camera $ player game]
+        , cammap balls
+        , cammap bullets
+        , cammap barrels
+        , cammap smoke
         ]
 
 
@@ -87,23 +100,66 @@ instance Entity Game where
         up    = update time game
         ups x = map up $ x game
     in  shot time $
-      game { player = up $ player game
+        removeSmoke $
+        checkBarrelExplosions $
+        game { player = up $ player game
              , balls = ups balls
              , bullets = ups bullets
+             , barrels = ups barrels
+             , smoke = ups smoke
              }
 
 initUpdate time game = update time game game
 
 {-} ##########
-    # ROLLES #
+    # RULLES #
     ########## -}
 
 shot :: Float -> Game -> Game
-shot time game = game {
+shot _ game = game {
         clicks=[],
         bullets=[Ball (playerPos game) (100*(normalize c)) 5 | c<-clicks game]
                 ++ bullets game
       }
+
+removeSmoke :: Game -> Game
+removeSmoke game = game {
+  smoke = filter ((>0) . ttl) $ smoke game } where
+    ttl :: Smoke -> Float
+    ttl (Smoke _ t _) = t
+
+randomSt :: (Float, Float) -> State StdGen Float  
+randomSt = state . randomR
+
+createExplosionSmoke :: Vector -> State StdGen Smoke
+createExplosionSmoke m = do
+    pa <- randomSt (0, 2*pi)
+    pr <- randomSt (0, 10)
+    let p = mkPolar pr pa
+    va <- randomSt (0, 2*pi)
+    vr <- randomSt (10, 500)
+    let v = mkPolar vr va
+    r <- randomSt (10, 50)
+    ttl <- randomSt (0.25, 1)
+    return $ Smoke (Ball (p + m) v r) ttl ttl
+
+createExplosion :: Int -> Vector -> Game -> Game
+createExplosion size pos game =
+    game {seed=seed', smoke=smoke game ++ newsmoke} where
+        (newsmoke, seed') = runState generatePaticles $ seed game
+        generatePaticles = sequence $ take 20 $ repeat $ createExplosionSmoke pos
+
+checkBarrelExplosions :: Game -> Game
+checkBarrelExplosions game =
+    explosions $ game {bullets=bullets', barrels=barrels'} where
+        onfly :: Bullet -> [Barrel] -> (Either Bullet Vector, [Barrel])
+        onfly bullet [] = (Left bullet, [])
+        onfly bullet (x:xs) | ballsCollide bullet x = (Right $ ballPos x, xs)
+                            | otherwise = (\(a, b)->(a, x:b)) $ onfly bullet xs
+        (bulletOrVector, barrels') = flip runState (barrels game) $
+            sequence (map (state . onfly) (bullets game))
+        bullets' = [b | Left b <- bulletOrVector]
+        explosions = foldl (.) id [createExplosion 10 v | Right v <- bulletOrVector]
 
 
 {-} ##########
@@ -114,7 +170,12 @@ instance Entity Ball where
   update time _ (Ball p v r) = Ball (p + (toVector time)*v) v r
   render (Ball (x:+y) v r) = translate x y $
                              color white $
-                             circleSolid r 
+                             circleSolid r
+
+ballsCollide (Ball p1 _ r1) (Ball p2 _ r2) =
+    (realPart $ abs $ (p1 - p2)) < (r1 + r2)
+
+ballPos (Ball p _ _) = p
 
 {-} ##########
     # PLAYER #
@@ -141,4 +202,19 @@ keyboardToVector = Map.foldrWithKey f (0:+0) where
     f k v a = a + (stateToScalar v)*(keyToVector k)
 
 playerPos :: Game -> Vector
-playerPos game = p where Ball p _ _ = body $ player game 
+playerPos game = p where Ball p _ _ = body $ player game
+
+{-} ###########
+    #  SMOKE  #
+    ########### -}
+
+instance Entity Smoke where
+  update time game (Smoke ball ttl total) =
+    Smoke (update time game ball) (ttl - time) total
+  render (Smoke (Ball p v r) ttl total)
+    | ttl > 0   = render $ Ball p v (r*ttl/total)
+    | otherwise = Blank
+
+{-} ###########
+    #  OTHER  #
+    ########### -}

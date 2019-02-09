@@ -28,6 +28,20 @@
   (major1) == 1 && (major2) <  13 || \
   (major1) == 1 && (major2) == 13 && (minor) <= 0)
 
+/* package mtl-2.2.2 */
+#define VERSION_mtl "2.2.2"
+#define MIN_VERSION_mtl(major1,major2,minor) (\
+  (major1) <  2 || \
+  (major1) == 2 && (major2) <  2 || \
+  (major1) == 2 && (major2) == 2 && (minor) <= 2)
+
+/* package random-1.1 */
+#define VERSION_random "1.1"
+#define MIN_VERSION_random(major1,major2,minor) (\
+  (major1) <  1 || \
+  (major1) == 1 && (major2) <  1 || \
+  (major1) == 1 && (major2) == 1 && (minor) <= 0)
+
 /* tool cpphs-1.20.8 */
 #define TOOL_VERSION_cpphs "1.20.8"
 #define MIN_TOOL_VERSION_cpphs(major1,major2,minor) (\
