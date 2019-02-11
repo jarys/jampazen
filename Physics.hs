@@ -7,6 +7,7 @@ j :: Vector
 j = 0:+1
 
 normalize :: RealFloat a => Complex a -> Complex a
+normalize (0:+0) = 0:+0
 normalize a = a / (sqrt $ a * conjugate a)
 
 toxy :: Complex a -> (a, a)

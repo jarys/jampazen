@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Main(main) where
 
@@ -25,11 +26,11 @@ import Control.Monad.State
 import Control.Lens
 
 import Physics
-{-}
-infixl 0 &
-(&) :: a->(a->b)->b
-(&) = flip ($)
--}
+
+{-} ##############
+    # STRUCTURES #
+    ############## -}
+
 data Ball    = Ball Vector Vector Float
 data Timer   = Timer
     { _total  :: Float
@@ -64,9 +65,6 @@ makeLenses ''MonsterData
 
 type Monster = Entity MonsterData
 
-
-
-
 data Game = Game { 
       _player   :: Player
     , _keyboard :: Map.Map Key KeyState
@@ -79,6 +77,10 @@ data Game = Game {
     , _monsters :: [Monster]
     }
 makeLenses ''Game
+
+{-} ##########
+    # ENTITY #
+    ########## -}
 
 renderBody :: Entity e -> Picture
 renderBody ent = translate x y $
@@ -93,7 +95,11 @@ collide :: Entity a -> Entity b -> Bool
 collide a b = (realPart $ abs $ (a^.pos - b^.pos)) < (a^.rad + b^.rad)
 
 isAlive :: Entity e -> Bool
-isAlive ent = ent^.lifes > 0
+isAlive ent = (ent^.lifes) > 0
+
+{-} ##########
+    #  GAME  #
+    ########## -}
 
 window :: Display
 window = InWindow "JampaZen" (500, 500) (5, 5) -- w, h, offset
@@ -102,7 +108,7 @@ background :: Color
 background = black
 
 initialState :: Game
-initialState = generateMonster 0 $ Game
+initialState = Game
     { _player = Entity
         { _pos = 0
         , _vel = 0
@@ -124,26 +130,12 @@ initialState = generateMonster 0 $ Game
 fps :: Int
 fps = 60
 
-main :: IO ()
-main = play window background fps initialState renderGame handleKeys updateGame
-
 handleKeys :: Event -> Game -> Game
---handleKeys (EventKey (Char key) keystate _ _) game =
---    game { keyboard = Map.adjust (const keystate) (Char key) (keyboard game)}
 handleKeys (EventKey (Char key) keystate _ _) =
     keyboard %~ Map.adjust (const keystate) (Char key)
-
 handleKeys (EventKey (MouseButton LeftButton) Down _ (mx, my)) =
     clicks %~ (:) (mx:+my)
-
---handleKeys (EventKey (MouseButton LeftButton) Down _ (mx, my)) game =
---  game { _clicks = (mx:+my) : _clicks game}
-
 handleKeys _ = id
-
-{-} ##########
-    #  GAME  #
-    ########## -}
 
 renderGame :: Game -> Picture
 renderGame game =
@@ -159,22 +151,25 @@ renderGame game =
 
 updateGame :: Float -> Game -> Game
 updateGame time game =
-    game & shot
+    game & ifPlayerAlive shot
          & removeSmoke
-         & checkBarrelExplosions
          & onceUpon 4 bulletSmoke
-         & bulletsKillMonsters
+         & ifPlayerAlive (onceUpon 120 spawnMonster)
          & playerMove
+         & collisions
          & player   %~ updateBody time
          & bullets  %~ map (updateBody time)
          & smoke    %~ map (updateSmoke time)
          & monsters %~ map (updateMonster time game)
-         & ticks +~ 1
+         & ticks    +~ 1
+
+main :: IO ()
+main = play window background fps initialState renderGame handleKeys updateGame
 
 
-{-} ##########
-    # RULLES #
-    ########## -}
+{-} ########
+    # SHOT #
+    ######## -}
 
 newBullet :: Vector -> Vector -> Bullet
 newBullet p v = Entity
@@ -183,24 +178,17 @@ newBullet p v = Entity
 shot :: Game -> Game
 shot game = game & (clicks .~ [])
                  & (bullets %~ (++) newBullets)
-      where dir :: Vector -> Vector
-            dir c = 500*normalize (c - game^.player.pos)
-            newBullets :: [Bullet]
-            newBullets = (newBullet (game^.player.pos) . dir) <$> game^.clicks
+      where newBullets = (newBullet (game^.player.pos) . (500*) . normalize) <$> game^.clicks
 
-
-
-removeSmoke :: Game -> Game
---removeSmoke game = game {
---  smoke = filter (\(Smoke _ timer)->not $ finished timer) $ smoke game } where
-
-removeSmoke = smoke %~ filter ((>0) . (^.body.actual))
+{-} ##############
+    # EXPLOSIONS #
+    ############## -}
 
 randomSt :: (Float, Float) -> State StdGen Float  
 randomSt = state . randomR
 
-createExplosionSmoke :: Float -> Vector -> State StdGen Smoke
-createExplosionSmoke size pos = do
+generateExplosionSmoke :: Float -> Vector -> State StdGen Smoke
+generateExplosionSmoke size pos = do
     pa <- randomSt (0, 2*pi)
     pr <- randomSt (0, 5*size)
     let p = mkPolar pr pa
@@ -209,22 +197,26 @@ createExplosionSmoke size pos = do
     let v = mkPolar vr va
     r <- randomSt (10, 50)
     ttl <- randomSt (0.25, (sqrt size)/3)
-    return Entity {_pos=p, _vel=v, _rad=r,
+    return Entity {_pos=p+pos, _vel=v, _rad=r,
                    _lifes=1, _damage=0, _body=newTimer ttl}
 
-createExplosion :: Float -> Vector -> Game -> Game
-createExplosion size pos game =
+generateExplosion :: Float -> Vector -> Game -> Game
+generateExplosion size pos game =
     game & seed  .~ seed'
          & smoke %~ (++) newsmoke
     where
         (newsmoke, seed') = flip runState (game^.seed) $
-            sequence $ take 30 $ repeat $ createExplosionSmoke size pos
+            sequence $ take 30 $ repeat $ generateExplosionSmoke size pos
+
+{-} ##############
+    # COLLISIONS #
+    ############## -}
 
 -- two entities collide
 (<..>) :: Entity a -> Entity b -> (Entity a, Entity b)
 a <..> b | collide a b && isAlive a && isAlive b = (,)
-              (a & lifes %~ (-) (b^.damage))
-              (b & lifes %~ (-) (a^.damage))
+              (a & lifes %~ flip (-) (b^.damage))
+              (b & lifes %~ flip (-) (a^.damage))
          | otherwise = (a, b)
 
 (<.+>) :: Entity a -> [Entity b] -> (Entity a, [Entity b]) 
@@ -237,26 +229,26 @@ a <..> b | collide a b && isAlive a && isAlive b = (,)
 (<++>) :: [Entity a] -> [Entity b] -> ([Entity a], [Entity b])
 (<++>) = mapAccumL (<+.>)
 
+smash :: Lens' Game [Entity a]
+      -> Lens' Game [Entity b]
+      -> (Entity a -> Game -> Game)
+      -> (Entity b -> Game -> Game)
+      -> Game -> Game
 
-{-}
-collisions game =
-    game $ destructions
-    where (bullets')
--}
-bulletsKillMonsters game = game {-{
-  bullets=bullets', monsters=monsters'} where
-    (bullets', mosters') = bullets game !! 0 <+.> monsters game
--}
-checkBarrelExplosions = id
+--smash as bs destroyA destroyB b game =
+smash as bs destroyA destroyB game =
+    game & as .~ aliveAs
+         & bs .~ aliveBs
+         & foldr (.) id destructions
+    where
+        (as', bs') = (game^.as) <++> (game^.bs)
+        (aliveAs, deadAs) = partition isAlive as'
+        (aliveBs, deadBs) = partition isAlive bs'
+        destructions = map destroyA deadAs ++ map destroyB deadBs
 
-{-
-(<+>) :: Destroyable e : e -> e -> (e, e)
-a <+> b | collides bullet monster
-          && isAlive a && isAlive b = (,)
-            (decrementLifes (getDamage b) a)
-            (decrementLifes (getDamage a) b)
-        | otherwise = (a, b)
--}
+collisions :: Game -> Game
+collisions =
+    smash bullets monsters destroyBullet destroyMonster
 
 {-} #########
     # TIMER #
@@ -270,22 +262,14 @@ onceUpon :: Int -> (Game -> Game) -> Game -> Game
 onceUpon n f game | game^.ticks `mod` n == 0 = f game
                   | otherwise                = game  
 
-bulletSmoke :: Game -> Game
-bulletSmoke game = game & smoke %~ (++) (map bulletToSmoke $ game^.bullets)  
-      where bulletToSmoke bullet = Entity{
-            _pos=bullet^.pos
-          , _vel=0
-          , _rad=bullet^.rad
-          , _lifes=1
-          , _damage= 0
-          , _body=newTimer 0.25
-          }
-
 {-} ##########
     # PLAYER #
     ########## -}
 
-playerMove game = game & player.vel .~ 100*(keyboardToVector $ game^.keyboard)
+playerMove game = game & player.vel .~ 100*normalize (keyboardToVector $ game^.keyboard)
+
+ifPlayerAlive :: (Game -> Game) -> Game -> Game
+ifPlayerAlive f game = if isAlive (game^.player) then f game else game
 
 stateToScalar :: KeyState -> Vector
 stateToScalar Up = 1
@@ -298,9 +282,23 @@ keyboardToVector :: Map.Map Key KeyState -> Vector
 keyboardToVector = Map.foldrWithKey f (0:+0) where
     f k v a = a + (stateToScalar v)*(keyToVector k)
 
+destroyPlayer :: Player -> Game -> Game
+destroyPlayer player = generateExplosion 100 (player^.pos)
+
 {-} ###########
     #  SMOKE  #
     ########### -}
+
+bulletSmoke :: Game -> Game
+bulletSmoke game = game & smoke %~ (++) (map bulletToSmoke $ game^.bullets)  
+      where bulletToSmoke bullet = Entity{
+            _pos=bullet^.pos
+          , _vel=0
+          , _rad=bullet^.rad
+          , _lifes=1
+          , _damage= 0
+          , _body=newTimer 0.25
+          }
 
 updateSmoke :: Float -> Smoke -> Smoke
 updateSmoke time = (updateBody time) . (body.actual -~ time)
@@ -311,38 +309,19 @@ renderSmoke smoke = translate x y $
     where (x:+y) = smoke^.pos
           r = smoke^.rad * smoke^.body.actual / smoke^.body.total
 
+removeSmoke :: Game -> Game
+removeSmoke = smoke %~ filter ((>0) . (^.body.actual))
+
+{-} ##########
+    # BULLET #
+    ########## -}
+
+destroyBullet :: Bullet -> Game -> Game
+destroyBullet = const id
+
 {-} ###########
     # MONSTER #
     ########### -}
-
-renderSatelite :: Satelite -> Picture
-renderSatelite (Satelite r w h rot v t) =
-    rotate rot $
-    translate (w*cos t) (h*sin t)$
-    color white $
-    circleSolid r
-
-updateSatelite :: Float -> Satelite -> Satelite
-updateSatelite time (Satelite r w h rot v t) = (Satelite r w h rot v (t + v*time))
-
-updateMonster :: Float -> Game -> Monster -> Monster
-updateMonster time game monster = 
-        monster & updateBody time
-                & followPlayer 
-                & body.hull %~ map (updateSatelite time)
-        where
-            pp = game^.player.pos
-            mp = monster^.pos
-            followPlayer = vel .~ 100*normalize (pp - mp)
-              -- | (game^.ticks) + (monster^.body.shift) `mod` 60 /= 0 = id
-              -- | abs (mp - pp) == 0 = id --deleni nulou
-              -- | otherwise = vel .~ 100*normalize (pp - mp)
-
-renderMonster :: Monster -> Picture
-renderMonster monster =
-    translate x y $ pictures $ renderSatelite <$> (monster^.body.hull)
-    where (x:+y) = monster^.pos
-
 
 generateSatelite :: State StdGen Satelite
 generateSatelite = do
@@ -371,3 +350,44 @@ generateMonster p game =
               }
     where (hull', seed') = flip runState (game^.seed) $
               sequence $ take 20 $ repeat $ generateSatelite
+
+spawnMonster :: Game -> Game
+spawnMonster game = 
+    game & generateMonster (mkPolar d a)
+         & seed     .~ seed'
+    where ((a, d), seed') = runState randomMonster (game^.seed)
+          randomMonster = do
+              a <- randomSt (0, 2*pi)
+              d <- randomSt (1000, 2000)
+              return (a, d)
+
+
+renderSatelite :: Satelite -> Picture
+renderSatelite (Satelite r w h rot v t) =
+    rotate rot $
+    translate (w*cos t) (h*sin t)$
+    color white $
+    circleSolid r
+
+updateSatelite :: Float -> Satelite -> Satelite
+updateSatelite time (Satelite r w h rot v t) = (Satelite r w h rot v (t + v*time))
+
+updateMonster :: Float -> Game -> Monster -> Monster
+updateMonster time game monster = 
+        monster & updateBody time
+                & followPlayer 
+                & body.hull %~ map (updateSatelite time)
+        where
+            pp = game^.player.pos
+            mp = monster^.pos
+            followPlayer
+              | ((game^.ticks) + (monster^.body.shift)) `mod` 120 /= 0 = id
+              | otherwise = vel .~ 100*normalize (pp - mp)
+
+renderMonster :: Monster -> Picture
+renderMonster monster =
+    translate x y $ pictures $ renderSatelite <$> (monster^.body.hull)
+    where (x:+y) = monster^.pos
+
+destroyMonster :: Monster -> Game -> Game
+destroyMonster monster = generateExplosion 15 (monster^.pos)
