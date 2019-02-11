@@ -1,0 +1,14 @@
+cabal: Entering directory '/tmp/cabal-tmp-5467/contravariant-1.5'
+Configuring contravariant-1.5...
+Building contravariant-1.5...
+Preprocessing library contravariant-1.5...
+[1 of 4] Compiling Data.Functor.Contravariant ( old-src/Data/Functor/Contravariant.hs, dist/dist-sandbox-d89b340b/build/Data/Functor/Contravariant.o )
+[2 of 4] Compiling Data.Functor.Contravariant.Divisible ( src/Data/Functor/Contravariant/Divisible.hs, dist/dist-sandbox-d89b340b/build/Data/Functor/Contravariant/Divisible.o )
+[3 of 4] Compiling Data.Functor.Contravariant.Compose ( src/Data/Functor/Contravariant/Compose.hs, dist/dist-sandbox-d89b340b/build/Data/Functor/Contravariant/Compose.o )
+[4 of 4] Compiling Data.Functor.Contravariant.Generic ( src/Data/Functor/Contravariant/Generic.hs, dist/dist-sandbox-d89b340b/build/Data/Functor/Contravariant/Generic.o )
+Creating package registration file:
+/tmp/pkgConf-contravariant-12145174067468703135.5
+Installing library in
+/home/agi/jampazen/.cabal-sandbox/lib/x86_64-linux-ghc-8.0.2/contravariant-1.5-1TVSrNRmanFB5XeOBDccHL
+Registering contravariant-1.5...
+cabal: Leaving directory '/tmp/cabal-tmp-5467/contravariant-1.5'

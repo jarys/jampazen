@@ -28,6 +28,13 @@
   (major1) == 1 && (major2) <  13 || \
   (major1) == 1 && (major2) == 13 && (minor) <= 0)
 
+/* package lens-4.17 */
+#define VERSION_lens "4.17"
+#define MIN_VERSION_lens(major1,major2,minor) (\
+  (major1) <  4 || \
+  (major1) == 4 && (major2) <  17 || \
+  (major1) == 4 && (major2) == 17 && (minor) <= 0)
+
 /* package mtl-2.2.2 */
 #define VERSION_mtl "2.2.2"
 #define MIN_VERSION_mtl(major1,major2,minor) (\

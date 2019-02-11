@@ -1,0 +1,13 @@
+cabal: Entering directory '/tmp/cabal-tmp-5469/parallel-3.2.2.0'
+Configuring parallel-3.2.2.0...
+Building parallel-3.2.2.0...
+Preprocessing library parallel-3.2.2.0...
+[1 of 3] Compiling Control.Seq      ( Control/Seq.hs, dist/dist-sandbox-d89b340b/build/Control/Seq.o )
+[2 of 3] Compiling Control.Parallel ( Control/Parallel.hs, dist/dist-sandbox-d89b340b/build/Control/Parallel.o )
+[3 of 3] Compiling Control.Parallel.Strategies ( Control/Parallel/Strategies.hs, dist/dist-sandbox-d89b340b/build/Control/Parallel/Strategies.o )
+Creating package registration file:
+/tmp/pkgConf-parallel-3.2.217345751981973594324.0
+Installing library in
+/home/agi/jampazen/.cabal-sandbox/lib/x86_64-linux-ghc-8.0.2/parallel-3.2.2.0-5FTNtQ1bv10JMH2BqrF0tZ
+Registering parallel-3.2.2.0...
+cabal: Leaving directory '/tmp/cabal-tmp-5469/parallel-3.2.2.0'

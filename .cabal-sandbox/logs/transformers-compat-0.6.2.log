@@ -1,0 +1,16 @@
+cabal: Entering directory '/tmp/cabal-tmp-5475/transformers-compat-0.6.2'
+Configuring transformers-compat-0.6.2...
+Building transformers-compat-0.6.2...
+Preprocessing library transformers-compat-0.6.2...
+[1 of 6] Compiling Paths_transformers_compat ( dist/dist-sandbox-d89b340b/build/autogen/Paths_transformers_compat.hs, dist/dist-sandbox-d89b340b/build/Paths_transformers_compat.o )
+[2 of 6] Compiling Data.Functor.Classes.Generic.Internal ( generics/Data/Functor/Classes/Generic/Internal.hs, dist/dist-sandbox-d89b340b/build/Data/Functor/Classes/Generic/Internal.o )
+[3 of 6] Compiling Data.Functor.Classes.Generic ( generics/Data/Functor/Classes/Generic.hs, dist/dist-sandbox-d89b340b/build/Data/Functor/Classes/Generic.o )
+[4 of 6] Compiling Control.Monad.Trans.Select ( 0.5/Control/Monad/Trans/Select.hs, dist/dist-sandbox-d89b340b/build/Control/Monad/Trans/Select.o )
+[5 of 6] Compiling Control.Monad.Trans.Instances ( src/Control/Monad/Trans/Instances.hs, dist/dist-sandbox-d89b340b/build/Control/Monad/Trans/Instances.o )
+[6 of 6] Compiling Control.Monad.Trans.Accum ( 0.5/Control/Monad/Trans/Accum.hs, dist/dist-sandbox-d89b340b/build/Control/Monad/Trans/Accum.o )
+Creating package registration file:
+/tmp/pkgConf-transformers-compat-0.613780686242999170.2
+Installing library in
+/home/agi/jampazen/.cabal-sandbox/lib/x86_64-linux-ghc-8.0.2/transformers-compat-0.6.2-A42QNCVU54L666iVXjX36W
+Registering transformers-compat-0.6.2...
+cabal: Leaving directory '/tmp/cabal-tmp-5475/transformers-compat-0.6.2'
