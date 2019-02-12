@@ -25,7 +25,25 @@ import Control.Monad.State
 
 import Control.Lens
 
-import Physics
+{-} ###########
+    # PHYSICS #
+    ########### -}
+
+import Data.Complex
+
+type Vector = Complex Float
+j :: Vector
+j = 0:+1
+
+normalize :: RealFloat a => Complex a -> Complex a
+normalize (0:+0) = 0:+0
+normalize a = a / (sqrt $ a * conjugate a)
+
+toxy :: Complex a -> (a, a)
+toxy (x :+ y) = (x, y)
+
+toVector :: Float -> Vector
+toVector x = x:+0
 
 {-} ##############
     # STRUCTURES #
@@ -154,7 +172,7 @@ updateGame time game =
     game & ifPlayerAlive shot
          & removeSmoke
          & onceUpon 4 bulletSmoke
-         & ifPlayerAlive (onceUpon 120 spawnMonster)
+         & ifPlayerAlive (onceUpon 50 spawnMonster)
          & playerMove
          & collisions
          & player   %~ updateBody time
@@ -341,7 +359,7 @@ generateMonster p game =
                 _pos=p
               , _vel=0
               , _rad=50
-              , _lifes=6
+              , _lifes=3
               , _damage=1
               , _body=MonsterData {
                     _hull=hull'
